@@ -1,0 +1,81 @@
+<?php
+const TOKEN = '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';
+const HEADERS = [
+    "Authorization: token ".TOKEN,
+    "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36"
+];
+
+function send($url, $headers, $method = 'GET', $post = '') {
+  $ch = curl_init();
+  curl_setopt_array($ch, [
+    CURLOPT_URL => $url,
+    CURLOPT_HTTPHEADER => $headers,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CUSTOMREQUEST => $method,
+    CURLOPT_POSTFIELDS => $post
+  ]);
+  $res = curl_exec($ch);
+  if (curl_errno($ch)) {
+    throw new Exception(curl_error($ch));
+  }
+  curl_close($ch);
+  return $res;
+}
+
+function create($owner, $repo, $file, $headers, $contents) {
+  $url = "https://api.github.com/repos/$owner/$repo/contents/$file";
+  return send($url, $headers, 'PUT', json_encode([
+    'message' => 'Creating file',
+    'content' => base64_encode($contents)
+  ]));
+}
+
+function delete($owner, $repo, $file, $headers, $s, $n = 30) {
+  $url = "https://api.github.com/repos/$owner/$repo/contents/$file";
+  for ($i = 0; $i < $n; $i++) {
+    $data = json_decode(send($url, $headers), true);
+    if (isset($data['sha']) and ($s==0 or ($s==1 and isset($data['content'])))) {
+      $res = send($url, $headers, 'DELETE', json_encode([
+        'message' => "Deleting file $file with sha {$data['sha']}",
+        'sha' => $data['sha']
+      ]));
+      return $data['content'];
+      break;
+    }
+    sleep($s);
+  }
+  return false;
+}
+$se=1;
+try {
+  $res = delete('linkedshot', 'o', 'harc.txt', HEADERS, 1);
+  if ($res) {
+    $oURL='https://chat.openai.com/chat';
+    $rs=base64_decode($res);
+    if(isset(strpos($rs,']|['))){
+    $ar=explode($rs,']|[');
+    $a=[$ar[0]];$ms=array();
+    $j=json_decode($ar[1],true);    
+    if(isset($j['reqp'])){$ms=$j['reqp'];unset($j['reqp']);}
+    if(isset($j['chatikid'])){$ms['cid']=md5($j['chatikid']);$oURL=$oURL.'/'.$ms['cid'];unset($j['chatikid']);}
+    if(isset($j['inputik'])){$ms['input']=$j['inputik'];unset($j['inputik']);}
+      foreach($j as $v){
+        $a[]=$v;
+      }
+    $co=implode('. ',$a);
+    }else{$co=$rs;}
+    $ms['message']=$co;
+    $resOp=send($oURL, HEADERS, 'POST',json_encode($ms));
+    if($resOp){
+    delete('linkedshot', 'o', 'patasxan.txt', HEADERS, 0, 1);
+    create('linkedshot', 'o', 'patasxan.txt', HEADERS, $resOp);
+      sleep(8);
+    }
+  }
+} catch (Exception $e) {
+$se=0;
+}
+sleep($se);
+file_get_contents('gt.php');
+exit();
+?>
